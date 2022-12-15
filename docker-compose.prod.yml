@@ -1,0 +1,57 @@
+version: '2'
+
+services:
+  dehqonoboddb_prod:
+    container_name: dehqonoboddb_prod
+    restart: always
+    image: postgres:12.2
+    environment:
+      POSTGRES_DB: db_dehqonobod_prod
+      POSTGRES_USER: dehqonoboduser_prod
+      POSTGRES_PASSWORD: dehqonobodpass_prod
+    networks:
+      - dehqonobod-network
+    volumes:
+        - dehqonoboddata:/var/lib/postgresql/dehqonoboddata/
+
+  dehqonobodweb_prod:
+    container_name: dehqonobodweb_prod
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:2828
+    volumes:
+      - static_volume_dehqonobod:/home/app/web/static
+      - media_volume_dehqonobod:/home/app/web/media
+    networks:
+      - dehqonobod-network
+    depends_on:
+      - dehqonoboddb_prod
+    ports:
+      - "2828:2828"
+    env_file:
+      - ./.env.prod
+
+  dehqonobodnginx:
+    container_name: dehqonobod-nginx
+    restart: always
+    build: ./nginx
+    volumes:
+      - static_volume_dehqonobod:/home/app/web/static
+      - media_volume_dehqonobod:/home/app/web/media
+    ports:
+      - "2424:2424"
+    networks:
+      - dehqonobod-network
+    depends_on:
+      - dehqonobodweb_prod
+
+volumes:
+  dehqonoboddata:
+  static_volume_dehqonobod:
+  media_volume_dehqonobod:
+
+networks:
+  dehqonobod-network:
+    driver: bridge
